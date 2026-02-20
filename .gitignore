@@ -2,6 +2,10 @@
 venv/
 ENV/
 env/
+
+#commands, requirements etc.
+*.txt
+
 # mp3 Songs - copywrites
 samples/
 
@@ -18,3 +22,6 @@ Thumbs.db
 
 # Generated files
 *.png
+
+# Docker
+*.tar

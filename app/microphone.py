@@ -22,8 +22,6 @@ def record_audio(duration=5, rate=44100):
         data = stream.read(chunk)
         frames.append(np.frombuffer(data, dtype=np.float32))
 
-    print("Done recording")
-
     stream.stop_stream()
     stream.close()
     p.terminate()
