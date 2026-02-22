@@ -12,6 +12,8 @@ Identify uploaded audio files
 
 Provide a simple web interface
 
+## Application Preview
+![Application Screenshot](screenshot.png)
 ## Overview
 
 This project implements a simplified audio fingerprinting pipeline. It demonstrates how digital signal processing and database matching can be combined to build a basic music recognition system.
