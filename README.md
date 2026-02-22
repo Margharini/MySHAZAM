@@ -1,35 +1,43 @@
-# 🎵 My Song Recognition
+# My Song Recognition
 
-A simplified Shazam-like audio recognition system built with **FastAPI**, **PostgreSQL**, and **audio fingerprinting using STFT**.
+A minimal Shazam-like song recognition system built with FastAPI, PostgreSQL, and audio fingerprinting using STFT.
 
-This project demonstrates how digital signal processing, database indexing, and backend optimization can be combined to create a real-time music recognition system.
+The application can:
 
----
+Recognize songs in real time from a microphone
+
+Index new songs into a database
+
+Identify uploaded audio files
+
+Provide a simple web interface
 
 ## Application Preview
 ![Application Screenshot](screenshot.png)
+## Overview
 
-## 🚀 Key Features
+This project implements a simplified audio fingerprinting pipeline. It demonstrates how digital signal processing and database matching can be combined to build a basic music recognition system.
 
-- 🎤 Real-time recognition from microphone input
-- 📂 Audio file identification
-- 📥 Indexing new songs into a fingerprint database
-- 🗄 Efficient SQL-based fingerprint matching
-- 🌐 Minimal web interface
-- ⚡ Backend performance optimizations
+The system:
 
----
+Extracts spectral features from audio using Short-Time Fourier Transform (STFT).
 
-## 🧠 How It Works
+Detects spectral peaks per time frame.
 
-### 1️⃣ Fingerprint Generation
+Converts peak frequency indices into simple hashes.
 
-Audio is processed using **Short-Time Fourier Transform (STFT)**:
+Stores hashes with time offsets in PostgreSQL.
 
-- `n_fft = 2048`
-- Spectral magnitude is computed per time frame
-- Peaks above 50% of maximum magnitude are selected
-- Peak frequency indices are converted into simple hash values
+Matches incoming audio fingerprints against stored fingerprints using offset alignment.
+
+## Architecture
+### Fingerprint Generation
+
+Audio is transformed using STFT (n_fft=2048).
+
+For each time frame, peaks above 50% of the maximum magnitude are detected.
+
+Each peak frequency index becomes a fingerprint hash.
 
 Each fingerprint is stored as:
 
@@ -39,8 +47,8 @@ Each fingerprint is stored as:
 
 This is a simplified approach compared to production-grade fingerprinting systems.
 
-### 2️⃣ Database Layer
-Fingerprint storage schema:
+### Database Layer
+Table Structure
 ```SQL
 CREATE TABLE fingerprints (
     song_name TEXT,
@@ -49,7 +57,7 @@ CREATE TABLE fingerprints (
 );
 ```
 
-### 3️⃣ Matching Strategy
+###Matching Strategy
 
 Instead of performing thousands of individual SQL queries, the system performs a single query:
 
@@ -59,14 +67,7 @@ FROM fingerprints
 WHERE hash = ANY(:hashes);
 ```
 
-All potential matches are fetched at once.
-
-The system then:
-
-- Computes offset differences
-- Counts consistent alignments
-- Selects the song with the strongest offset consistency
-This significantly improves performance and avoids request timeouts.
+All potential matches are fetched at once. Offset differences are then counted to determine the most consistent alignment, which identifies the best matching song.
 
 An index on the hash column is required for performance:
 
@@ -74,9 +75,8 @@ An index on the hash column is required for performance:
 CREATE INDEX idx_hash ON fingerprints(hash);
 ```
 
-### 🎤Microphone Recording
+### Microphone Recording
 
-Configuration:
 - Sample rate: 44100 Hz
 - Mono
 - Float32 format
@@ -86,12 +86,6 @@ Configuration:
 - Builds a 5-second sliding window
 - Attempts recognition
 - Stops after 20 seconds (timeout)
-
-Confidence score:
-
-```python
-confidence = score / number_of_sample_fingerprints
-```
 
 ### API Endpoints
 GET /
@@ -128,11 +122,17 @@ Example response:
 }
 ```
 
+Confidence is calculated as:
+
+```python
+confidence = score / number_of_sample_fingerprints
+```
+
 POST /identify
 
 Identifies an uploaded audio file using the same fingerprinting and matching pipeline.
 
-⚙ Installation
+Installation
 1. Clone the Repository
 git clone <repository_url>
 cd <project_directory>
@@ -149,7 +149,7 @@ Required libraries include:
 - sqlalchemy
 - psycopg2
 
-3. PostgreSQL Setup
+3. Set Up PostgreSQL
 
 Create database:
 ```cmd
@@ -182,44 +182,38 @@ Open in your browser:
 http://127.0.0.1:8000
 ```
 
-### ⚡ Performance Improvements
-Initial version suffered from request timeouts due to thousands of database queries executed in loops.
+### Performance Improvements
+The system originally suffered from request timeouts due to thousands of database queries executed in a loop.
+This was resolved by:
+Replacing per-hash queries with a single ANY() query
+Adding a database index on hash
+Using a sliding window for recognition
+Adding silence detection before analysis
+These changes significantly reduced latency and eliminated timeouts.
 
-Optimizations implemented:
-- Replaced per-hash queries with a single ANY() query
-- Added index on hash
-- Introduced sliding recognition window
-- Added silence detection before analysis
-These improvements significantly reduced latency and eliminated timeouts.
+### Limitations
+This is a simplified fingerprinting implementation:
+Hashes are based only on peak frequency index
+No peak pairing
+No time-delta hashing
+Limited robustness to noise
+Confidence score is heuristic, not probabilistic
+Production systems use constellation maps, peak pairing, and noise-resistant hashing techniques.
 
-### ⚠Limitations
-- This is an educational implementation:
-- Hashes are based only on peak frequency index
-- No peak pairing
-- No time-delta hashing
-- Limited robustness to noise
-- Confidence score is heuristic
-
-Production systems use:
-- Constellation maps
-- Peak pairing
-- Time-delta hashing
-- Noise-resistant fingerprinting
-
-🔮 Future Improvements
-- Implement peak pairing and time-delta hashing
-- Improve confidence scoring model
-- Add background task processing
-- Improve UI/UX
-- Docker containerization
-- Add automated tests
-
-🎯 Project Goals
+### Future Improvements
+Implement peak pairing and time-delta hashing
+Improve confidence scoring logic
+Add background processing tasks
+Improve UI/UX
+Add containerization (Docker)
+Add automated tests
+Project Goals
 This project demonstrates:
-- Digital Signal Processing fundamentals
-- Audio fingerprinting techniques
-- Efficient SQL-based matching strategies
-- Backend API design with FastAPI
-- Real-time audio handling
-- Practical performance optimization
-It serves as a technical exploration of simplified audio recognition systems.
+Digital signal processing fundamentals
+Audio fingerprinting concepts
+Efficient SQL-based matching
+API design with FastAPI
+Real-time audio handling
+Backend performance optimization
+It serves as an educational implementation of a simplified music recognition system.
+
