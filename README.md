@@ -1,34 +1,28 @@
 # My Song Recognition
 
-A minimal Shazam-like song recognition system built with FastAPI, PostgreSQL, and audio fingerprinting using STFT.
+A simplified audio fingerprinting system inspired by Shazam.  
+Built using FastAPI, PostgreSQL and STFT-based spectral analysis.
 
-The application can:
+The project demonstrates how digital signal processing and indexed SQL matching can be combined to build a basic music recognition backend.
 
-Recognize songs in real time from a microphone
-
-Index new songs into a database
-
-Identify uploaded audio files
-
-Provide a simple web interface
+---
 
 ## Application Preview
 ![Application Screenshot](screenshot.png)
+
 ## Overview
 
-This project implements a simplified audio fingerprinting pipeline. It demonstrates how digital signal processing and database matching can be combined to build a basic music recognition system.
+The system implements a simplified fingerprinting pipeline:
 
-The system:
+1. Audio signal is transformed using Short-Time Fourier Transform (STFT).
+2. Spectral peaks are extracted per time frame.
+3. Peak frequency indices are converted into hash values.
+4. Hashes with time offsets are stored in PostgreSQL.
+5. Incoming audio fingerprints are matched using offset alignment.
 
-Extracts spectral features from audio using Short-Time Fourier Transform (STFT).
+This is an educational implementation and does not aim to replicate production-grade robustness.
 
-Detects spectral peaks per time frame.
-
-Converts peak frequency indices into simple hashes.
-
-Stores hashes with time offsets in PostgreSQL.
-
-Matches incoming audio fingerprints against stored fingerprints using offset alignment.
+---
 
 ## Architecture
 ### Fingerprint Generation
@@ -57,7 +51,7 @@ CREATE TABLE fingerprints (
 );
 ```
 
-###Matching Strategy
+### Matching Strategy
 
 Instead of performing thousands of individual SQL queries, the system performs a single query:
 
@@ -76,7 +70,7 @@ CREATE INDEX idx_hash ON fingerprints(hash);
 ```
 
 ### Microphone Recording
-
+Configuration:
 - Sample rate: 44100 Hz
 - Mono
 - Float32 format
@@ -183,37 +177,44 @@ http://127.0.0.1:8000
 ```
 
 ### Performance Improvements
-The system originally suffered from request timeouts due to thousands of database queries executed in a loop.
-This was resolved by:
-Replacing per-hash queries with a single ANY() query
-Adding a database index on hash
-Using a sliding window for recognition
-Adding silence detection before analysis
-These changes significantly reduced latency and eliminated timeouts.
+Initial version suffered from request timeouts due to thousands of database queries executed in loops.
+
+Optimizations implemented:
+- Replaced per-hash queries with a single ANY() query
+- Added index on hash
+- Introduced sliding recognition window
+- Added silence detection before analysis
+These improvements significantly reduced latency and eliminated timeouts.
 
 ### Limitations
-This is a simplified fingerprinting implementation:
-Hashes are based only on peak frequency index
-No peak pairing
-No time-delta hashing
-Limited robustness to noise
-Confidence score is heuristic, not probabilistic
-Production systems use constellation maps, peak pairing, and noise-resistant hashing techniques.
+- This is an educational implementation:
+- Hashes are based only on peak frequency index
+- No peak pairing
+- No time-delta hashing
+- Limited robustness to noise
+- Confidence score is heuristic
+
+Production systems use:
+- Constellation maps
+- Peak pairing
+- Time-delta hashing
+- Noise-resistant fingerprinting
 
 ### Future Improvements
-Implement peak pairing and time-delta hashing
-Improve confidence scoring logic
-Add background processing tasks
-Improve UI/UX
-Add containerization (Docker)
-Add automated tests
-Project Goals
+- Implement peak pairing and time-delta hashing
+- Improve confidence scoring model
+- Add background task processing
+- Improve UI/UX
+- Docker containerization
+- Add automated tests
+
+### Project Goals
 This project demonstrates:
-Digital signal processing fundamentals
-Audio fingerprinting concepts
-Efficient SQL-based matching
-API design with FastAPI
-Real-time audio handling
-Backend performance optimization
-It serves as an educational implementation of a simplified music recognition system.
+- Digital Signal Processing fundamentals
+- Audio fingerprinting techniques
+- Efficient SQL-based matching strategies
+- Backend API design with FastAPI
+- Real-time audio handling
+- Practical performance optimization
+It serves as a technical exploration of simplified audio recognition systems.
 
