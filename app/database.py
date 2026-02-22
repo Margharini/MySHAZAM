@@ -1,3 +1,4 @@
+from collections import defaultdict
 from sqlalchemy import create_engine, text
 
 import os
@@ -26,30 +27,49 @@ def save_fingerprints(song_name, fingerprints):
         conn.commit()
 
 def match_fingerprints(fingerprints):
-    hashes = list(set([hash_value for hash_value, _ in fingerprints]))
 
-    if not hashes:
+    if not fingerprints:
         return None, 0
 
-    placeholders = ", ".join([f":h{i}" for i in range(len(hashes))])
+    from collections import defaultdict
 
-    query = f"""
-        SELECT song_name, COUNT(*) as match_count
-        FROM fingerprints
-        WHERE hash IN ({placeholders})
-        GROUP BY song_name
-        ORDER BY match_count DESC
-        LIMIT 1
-    """
+    # Wyciągamy wszystkie hashe z próbki
+    sample_hashes = [h for h, _ in fingerprints]
 
-    params = {f"h{i}": h for i, h in enumerate(hashes)}
+    matches = []
 
     with engine.connect() as conn:
-        result = conn.execute(text(query), params)
-        row = result.fetchone()
 
-        if row:
-            return row[0], row[1]
+        # Jedno zapytanie z IN
+        query = text("""
+            SELECT song_name, time_offset, hash
+            FROM fingerprints
+            WHERE hash = ANY(:hashes)
+        """)
 
-    return None, 0
+        result = conn.execute(query, {"hashes": sample_hashes})
+
+        # Mapujemy wyniki
+        db_results = list(result)
+
+    # Dopasowanie offsetów
+    for db_song, db_offset, db_hash in db_results:
+
+        for sample_hash, sample_offset in fingerprints:
+            if sample_hash == db_hash:
+                offset_diff = db_offset - sample_offset
+                matches.append((db_song, offset_diff))
+
+    if not matches:
+        return None, 0
+
+    counter = defaultdict(int)
+
+    for song, diff in matches:
+        counter[(song, diff)] += 1
+
+    best_match = max(counter, key=counter.get)
+    best_score = counter[best_match]
+
+    return best_match[0], best_score
 

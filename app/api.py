@@ -27,7 +27,7 @@ def listen_microphone():
     max_seconds = 20
     chunk_duration = 1
     window_size = 5
-    threshold = 200
+    threshold = 0.02
 
     start_time = time.time()
 
@@ -41,16 +41,18 @@ def listen_microphone():
         if len(buffer) >= sample_rate * window_size:
 
             print("Analyzing window...")
+            if np.max(np.abs(buffer)) < 0.01:
+                continue
+            else:
+                fingerprints = generate_fingerprint(buffer, sr)
+                song, score = match_fingerprints(fingerprints)
 
-            fingerprints = generate_fingerprint(buffer, sr)
-            song, match_count = match_fingerprints(fingerprints)
-
-            if song and match_count > threshold:
+            if song and score > threshold:
                 print("Song detected:", song)
                 return {
                     "detected_song": song,
-                    "match_count": match_count,
-                    "confidence": round(match_count / len(fingerprints), 3)
+                    "score": score,
+                    "confidence": round(score / len(fingerprints), 3)
                 }
 
             # przesuwamy okno o 1 sekundę
@@ -61,7 +63,7 @@ def listen_microphone():
             print("Timeout reached.")
             return {
                 "detected_song": None,
-                "match_count": 0,
+                "score": 0,
                 "confidence": 0
             }
 
@@ -96,34 +98,104 @@ async def identify_song(file: UploadFile = File(...)):
 def home():
     return """
     <html>
-        <head>
-            <title>My song recognition</title>
-        </head>
-        <body style="font-family: Arial; text-align:center; margin-top:100px;">
-            <h1> Shazam Clone</h1>
-            <button onclick="listen()">Start Listening</button>
-            <h2 id="status"></h2>
+    <head>
+        <title>My song recognition</title>
+        <style>
+            body {
+                margin: 0;
+                font-family: Arial, sans-serif;
+                background: linear-gradient(135deg, #1f1f2e, #111);
+                color: white;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+            }
 
-            <script>
-                async function listen() {
-                    document.getElementById("status").innerText = "Listening...";
+            h1 {
+                font-size: 3rem;
+                margin-bottom: 40px;
+                letter-spacing: 2px;
+            }
 
-                    const response = await fetch("/listen", {
-                        method: "POST"
-                    });
+            .circle {
+                width: 150px;
+                height: 150px;
+                border-radius: 50%;
+                background: #1db954;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: 0.3s;
+                box-shadow: 0 0 40px rgba(29,185,84,0.6);
+            }
 
-                    const data = await response.json();
+            .circle:hover {
+                transform: scale(1.1);
+            }
 
-                    if (data.detected_song) {
-                        document.getElementById("status").innerText =
-                            "Detected: " + data.detected_song +
-                            "(confidence: " + data.confidence + ")";
-                    } else {
-                        document.getElementById("status").innerText =
-                            "No song detected.";
-                    }
+            .circle.listening {
+                animation: pulse 1.2s infinite;
+            }
+
+            @keyframes pulse {
+                0% { box-shadow: 0 0 20px rgba(29,185,84,0.6); }
+                50% { box-shadow: 0 0 60px rgba(29,185,84,1); }
+                100% { box-shadow: 0 0 20px rgba(29,185,84,0.6); }
+            }
+
+            #result {
+                margin-top: 40px;
+                font-size: 1.5rem;
+                text-align: center;
+            }
+
+            .confidence {
+                opacity: 0.7;
+                font-size: 1rem;
+            }
+        </style>
+    </head>
+    <body>
+
+        <h1>My song recognition</h1>
+
+        <div class="circle" id="button" onclick="listen()">
+            🎙
+        </div>
+
+        <div id="result"></div>
+
+        <script>
+            async function listen() {
+
+                const button = document.getElementById("button");
+                const result = document.getElementById("result");
+
+                button.classList.add("listening");
+                result.innerHTML = "Listening...";
+
+                const response = await fetch("/listen", {
+                    method: "POST"
+                });
+
+                const data = await response.json();
+
+                button.classList.remove("listening");
+
+                if (data.detected_song) {
+                    result.innerHTML = 
+                        "<b>" + data.detected_song + "</b><br>" +
+                        "<span class='confidence'>Confidence: " + 
+                        (data.confidence * 100).toFixed(1) + "%</span>";
+                } else {
+                    result.innerHTML = "No song detected";
                 }
-            </script>
-        </body>
+            }
+        </script>
+
+    </body>
     </html>
     """
