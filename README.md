@@ -1,4 +1,4 @@
-#My Song Recognition
+# My Song Recognition
 
 A minimal Shazam-like song recognition system built with FastAPI, PostgreSQL, and audio fingerprinting using STFT.
 
@@ -12,7 +12,7 @@ Identify uploaded audio files
 
 Provide a simple web interface
 
-Overview
+## Overview
 
 This project implements a simplified audio fingerprinting pipeline. It demonstrates how digital signal processing and database matching can be combined to build a basic music recognition system.
 
@@ -28,8 +28,8 @@ Stores hashes with time offsets in PostgreSQL.
 
 Matches incoming audio fingerprints against stored fingerprints using offset alignment.
 
-##Architecture
-###Fingerprint Generation
+## Architecture
+### Fingerprint Generation
 
 Audio is transformed using STFT (n_fft=2048).
 
@@ -43,10 +43,9 @@ Each fingerprint is stored as:
 (hash_value, time_offset)
 ```
 
-
 This is a simplified approach compared to production-grade fingerprinting systems.
 
-###Database Layer
+### Database Layer
 Table Structure
 ```SQL
 CREATE TABLE fingerprints (
@@ -55,7 +54,6 @@ CREATE TABLE fingerprints (
     time_offset INT
 );
 ```
-
 
 ###Matching Strategy
 
@@ -75,43 +73,30 @@ An index on the hash column is required for performance:
 CREATE INDEX idx_hash ON fingerprints(hash);
 ```
 
-###Microphone Recording
+### Microphone Recording
 
-Sample rate: 44100 Hz
+- Sample rate: 44100 Hz
+- Mono
+- Float32 format
+- Chunk size: 1024
+- The /listen endpoint:
+- Records 1-second chunks
+- Builds a 5-second sliding window
+- Attempts recognition
+- Stops after 20 seconds (timeout)
 
-Mono
-
-Float32 format
-
-Chunk size: 1024
-
-The /listen endpoint:
-
-Records 1-second chunks
-
-Builds a 5-second sliding window
-
-Attempts recognition
-
-Stops after 20 seconds (timeout)
-
-API Endpoints
+### API Endpoints
 GET /
-
 Returns a simple web interface with a microphone button.
 
 GET /songs
-
 Returns all indexed songs.
 
 POST /index
-
 Indexes a new uploaded song.
 
 Parameters:
-
 file: audio file
-
 name: song name
 
 Example response:
@@ -135,10 +120,7 @@ Example response:
 }
 ```
 
-
-
 Confidence is calculated as:
-
 
 ```python
 confidence = score / number_of_sample_fingerprints
@@ -156,22 +138,14 @@ cd <project_directory>
 pip install -r requirements.txt
 
 Required libraries include:
-
-fastapi
-
-uvicorn
-
-librosa
-
-numpy
-
-scipy
-
-pyaudio
-
-sqlalchemy
-
-psycopg2
+- fastapi
+- uvicorn
+- librosa
+- numpy
+- scipy
+- pyaudio
+- sqlalchemy
+- psycopg2
 
 3. Set Up PostgreSQL
 
@@ -206,67 +180,38 @@ Open in your browser:
 http://127.0.0.1:8000
 ```
 
-Performance Improvements
-
+### Performance Improvements
 The system originally suffered from request timeouts due to thousands of database queries executed in a loop.
-
 This was resolved by:
-
 Replacing per-hash queries with a single ANY() query
-
 Adding a database index on hash
-
 Using a sliding window for recognition
-
 Adding silence detection before analysis
-
 These changes significantly reduced latency and eliminated timeouts.
 
-Limitations
-
+### Limitations
 This is a simplified fingerprinting implementation:
-
 Hashes are based only on peak frequency index
-
 No peak pairing
-
 No time-delta hashing
-
 Limited robustness to noise
-
 Confidence score is heuristic, not probabilistic
-
 Production systems use constellation maps, peak pairing, and noise-resistant hashing techniques.
 
-Future Improvements
-
+### Future Improvements
 Implement peak pairing and time-delta hashing
-
 Improve confidence scoring logic
-
 Add background processing tasks
-
 Improve UI/UX
-
 Add containerization (Docker)
-
 Add automated tests
-
 Project Goals
-
 This project demonstrates:
-
 Digital signal processing fundamentals
-
 Audio fingerprinting concepts
-
 Efficient SQL-based matching
-
 API design with FastAPI
-
 Real-time audio handling
-
 Backend performance optimization
-
 It serves as an educational implementation of a simplified music recognition system.
 
